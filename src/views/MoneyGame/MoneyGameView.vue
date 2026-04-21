@@ -1,16 +1,12 @@
 <template>
   <div class="page-container money-game-page">
-    <div class="super-market-bg">
-      <div class="shelf shelf-top">
-        <div class="shelf-item">🧃</div>
-        <div class="shelf-item">🥤</div>
-        <div class="shelf-item">🧃</div>
-        <div class="shelf-item">🥤</div>
-      </div>
-      <div class="cash-register">
-        <div class="register-screen">收银机</div>
-      </div>
-    </div>
+    <ThreeScene
+      v-if="gamePhase === 'entrance'"
+      :gamePhase="gamePhase"
+      @arrive="handleArrive"
+      @enter="handleEnter"
+    />
+    <div class="super-market-bg" v-if="gamePhase !== 'entrance'"></div>
 
     <div class="header">
       <button class="back-btn" @click="goBack">← 返回</button>
@@ -49,9 +45,15 @@
       >
     </div>
 
-    <div class="game-container" v-if="!isFinished && currentQuestion">
+    <div
+      class="game-container"
+      v-if="!isFinished && currentQuestion && gamePhase !== 'entrance'"
+    >
       <div class="character-area">
-        <div class="character" :class="{ thinking: isThinking, happy: showSuccess, sad: showError }">
+        <div
+          class="character"
+          :class="{ thinking: isThinking, happy: showSuccess, sad: showError }"
+        >
           <div class="character-body">🧒</div>
           <div class="thought-bubble" v-if="showHint">
             <span>{{ hintText }}</span>
@@ -62,7 +64,32 @@
         </div>
       </div>
 
-      <div class="shopping-scene">
+      <div class="shelf-scene" v-if="!showCheckout">
+        <div class="shelf-header">
+          <div class="shelf-title">🛒 请选择商品</div>
+        </div>
+        <div class="shelf-items">
+          <div
+            v-for="item in shopItems"
+            :key="item.name"
+            class="shelf-item"
+            @click="selectItem(item)"
+          >
+            <div class="shelf-emoji">{{ item.emoji }}</div>
+            <div class="shelf-name">{{ item.name }}</div>
+            <div class="shelf-price">¥{{ item.price }}</div>
+          </div>
+        </div>
+        <button
+          class="checkout-btn"
+          @click="goToCheckout"
+          :disabled="!selectedItem"
+        >
+          去结账 →
+        </button>
+      </div>
+
+      <div class="shopping-scene" v-if="showCheckout && selectedItem">
         <div class="shop-header">
           <div class="shop-sign">🏪 小超市 - 结账台</div>
         </div>
@@ -81,13 +108,17 @@
           <div class="change-display" v-if="gameMode === 'subtraction'">
             <div class="change-label">找零计算</div>
             <div class="change-equation">
-              <span class="calc-num">{{ currentQuestion.breakMethod.showEquation }}</span>
+              <span class="calc-num">{{
+                currentQuestion.breakMethod.showEquation
+              }}</span>
             </div>
           </div>
         </div>
 
         <div class="money-wallet">
-          <div class="wallet-label">{{ gameMode === 'addition' ? '你有的钱' : '付了多少钱' }}</div>
+          <div class="wallet-label">
+            {{ gameMode === 'addition' ? '你有的钱' : '付了多少钱' }}
+          </div>
           <div class="money-display">
             <div class="money-list">
               <div
@@ -107,7 +138,9 @@
         <div class="calculation-area" v-if="gameMode === 'subtraction'">
           <div class="calc-title">💰 破十法计算 - 先算找零</div>
           <div class="calc-equation">
-            <span class="calc-num primary">{{ currentQuestion.breakMethod.hint1 }}</span>
+            <span class="calc-num primary">{{
+              currentQuestion.breakMethod.hint1
+            }}</span>
             <span class="calc-op">-</span>
             <span class="calc-num">{{ currentQuestion.item.price }}</span>
             <span class="calc-op">=</span>
@@ -123,9 +156,13 @@
           <div class="calc-equation">
             <span class="calc-num">{{ currentQuestion.makeMethod.have }}</span>
             <span class="calc-op">+</span>
-            <span class="calc-num highlight">{{ currentQuestion.makeMethod.give }}</span>
+            <span class="calc-num highlight">{{
+              currentQuestion.makeMethod.give
+            }}</span>
             <span class="calc-op">=</span>
-            <span class="calc-num primary">{{ currentQuestion.item.price }}</span>
+            <span class="calc-num primary">{{
+              currentQuestion.item.price
+            }}</span>
           </div>
           <div class="calc-hint">
             {{ currentQuestion.makeMethod.hint }}
@@ -134,7 +171,8 @@
 
         <div class="answer-section">
           <div class="answer-label" v-if="gameMode === 'subtraction'">
-            用破十法计算：{{ currentQuestion.breakMethod.hint1 }} - {{ currentQuestion.item.price }} = ?
+            用破十法计算：{{ currentQuestion.breakMethod.hint1 }} -
+            {{ currentQuestion.item.price }} = ?
           </div>
           <div class="answer-label" v-else>
             凑成 {{ currentQuestion.item.price }} 元，还差多少？
@@ -173,7 +211,9 @@
 
     <div class="result-card" v-else-if="isFinished">
       <div class="result-icon" :class="{ great: accuracy >= 80 }">🎉</div>
-      <div class="result-title">{{ accuracy >= 80 ? '太棒了！' : '继续加油！' }}</div>
+      <div class="result-title">
+        {{ accuracy >= 80 ? '太棒了！' : '继续加油！' }}
+      </div>
       <div class="result-message">
         {{ resultMessage }}
       </div>
@@ -183,7 +223,9 @@
           <div class="stat-label">正确</div>
         </div>
         <div class="stat">
-          <div class="stat-value wrong">{{ totalQuestions - correctCount }}</div>
+          <div class="stat-value wrong">
+            {{ totalQuestions - correctCount }}
+          </div>
           <div class="stat-label">错误</div>
         </div>
         <div class="stat">
@@ -196,12 +238,6 @@
         <button class="back-home-btn" @click="goBack">返回首页</button>
       </div>
     </div>
-
-    <div class="loading-state" v-else>
-      <div class="loading-character">🧒</div>
-      <div class="loading-text">小老板，准备好了吗？</div>
-      <button class="start-btn" @click="startGame">开始购物 🛒</button>
-    </div>
   </div>
 </template>
 
@@ -209,6 +245,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '@/stores/game'
+import ThreeScene from '@/components/ThreeScene.vue'
 
 const router = useRouter()
 const gameStore = useGameStore()
@@ -226,9 +263,9 @@ const getBillSVG = (value: number): string => {
     <rect x="5" y="5" width="25" height="25" rx="2" fill="white" stroke="#ccc"/>
     <text x="17" y="22" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">¥</text>
     <text x="50" y="22" font-size="18" font-weight="bold" text-anchor="middle" fill="#333">${value}</text>
-    <text x="50" y="30" font-size="8" text-anchor="middle" fill="#666">元</text>
+    <text x="50" y="30" font-size="8" text-anchor="middle" fill="#666">¥</text>
   </svg>`
-  return `data:image/svg+xml;base64,${btoa(svg)}`
+  return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`
 }
 
 const getCoinSVG = (value: number): string => {
@@ -243,7 +280,7 @@ const getCoinSVG = (value: number): string => {
     <circle cx="20" cy="20" r="14" fill="none" stroke="#DAA520" stroke-width="1"/>
     <text x="20" y="26" font-size="16" font-weight="bold" text-anchor="middle" fill="#8B4513">${value}</text>
   </svg>`
-  return `data:image/svg+xml;base64,${btoa(svg)}`
+  return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`
 }
 
 interface Item {
@@ -318,10 +355,52 @@ const showHint = ref(false)
 const isThinking = ref(false)
 const showSuccess = ref(false)
 const showError = ref(false)
+const showCheckout = ref(false)
+const selectedItem = ref<{ name: string; emoji: string; price: number } | null>(
+  null
+)
+const gamePhase = ref<'entrance' | 'shopping' | 'checkout'>('entrance')
 
-const currentQuestion = computed(() => questions.value[currentQuestionIndex.value])
-const progress = computed(() => (currentQuestionIndex.value / totalQuestions.value) * 100)
-const accuracy = computed(() => Math.round((correctCount.value / totalQuestions.value) * 100))
+const handleArrive = (location: string) => {}
+
+const handleEnter = () => {
+  if (gamePhase.value === 'entrance') {
+    gamePhase.value = 'shopping'
+    if (questions.value.length === 0) {
+      generateQuestions()
+    }
+  }
+}
+
+const shopItems = [
+  { name: '苹果', emoji: '🍎', price: 3 },
+  { name: '面包', emoji: '🍞', price: 5 },
+  { name: '牛奶', emoji: '🥛', price: 6 },
+  { name: '蛋糕', emoji: '🍰', price: 9 },
+  { name: '香蕉', emoji: '🍌', price: 4 },
+  { name: '鸡蛋', emoji: '🥚', price: 2 },
+]
+
+const selectItem = (item: { name: string; emoji: string; price: number }) => {
+  selectedItem.value = item
+}
+
+const goToCheckout = () => {
+  if (selectedItem.value && currentQuestion.value) {
+    currentQuestion.value.item = selectedItem.value
+    showCheckout.value = true
+  }
+}
+
+const currentQuestion = computed(
+  () => questions.value[currentQuestionIndex.value]
+)
+const progress = computed(
+  () => (currentQuestionIndex.value / totalQuestions.value) * 100
+)
+const accuracy = computed(() =>
+  Math.round((correctCount.value / totalQuestions.value) * 100)
+)
 
 const flatMoneyList = computed(() => {
   if (!currentQuestion.value) return []
@@ -369,7 +448,10 @@ const flattenMoney = (money: MoneyItem[]): FlatMoney[] => {
     for (let i = 0; i < item.count; i++) {
       flat.push({
         type: item.type,
-        img: item.type === 'bill' ? getBillSVG(item.value) : getCoinSVG(item.value),
+        img:
+          item.type === 'bill'
+            ? getBillSVG(item.value)
+            : getCoinSVG(item.value),
         label: `${item.value}元${item.type === 'bill' ? '纸币' : '硬币'}`,
       })
     }
@@ -378,7 +460,8 @@ const flattenMoney = (money: MoneyItem[]): FlatMoney[] => {
 }
 
 const generateSubtractionQuestion = (): Question => {
-  const levelConfig = levels.find(l => l.value === currentLevel.value) || levels[0]
+  const levelConfig =
+    levels.find(l => l.value === currentLevel.value) || levels[0]
   const maxPrice = levelConfig.maxPrice
   const item = items[Math.floor(Math.random() * items.length)]
   const price = Math.min(item.price, maxPrice)
@@ -422,7 +505,8 @@ const generateSubtractionQuestion = (): Question => {
 }
 
 const generateAdditionQuestion = (): Question => {
-  const levelConfig = levels.find(l => l.value === currentLevel.value) || levels[0]
+  const levelConfig =
+    levels.find(l => l.value === currentLevel.value) || levels[0]
   const maxPrice = levelConfig.maxPrice
   const item = items[Math.floor(Math.random() * items.length)]
   const price = Math.min(item.price, maxPrice)
@@ -432,9 +516,10 @@ const generateAdditionQuestion = (): Question => {
     possibleGives.push({ give, have: price - give })
   }
 
-  const makeMethod = possibleGives.length > 0
-    ? possibleGives[Math.floor(Math.random() * possibleGives.length)]
-    : { give: 1, have: price - 1 }
+  const makeMethod =
+    possibleGives.length > 0
+      ? possibleGives[Math.floor(Math.random() * possibleGives.length)]
+      : { give: 1, have: price - 1 }
 
   const hint = `商品${price}元，你出了${makeMethod.have}元，还差${makeMethod.give}元（${makeMethod.have}+${makeMethod.give}=${price}）`
 
@@ -493,9 +578,8 @@ const submitAnswer = () => {
 
     if (correct) {
       correctCount.value++
-      feedbackText.value = gameMode.value === 'subtraction'
-        ? '找零算对了！💰'
-        : '凑十法真棒！✨'
+      feedbackText.value =
+        gameMode.value === 'subtraction' ? '找零算对了！💰' : '凑十法真棒！✨'
       feedbackClass.value = 'correct'
       showSuccess.value = true
       showError.value = false
@@ -546,13 +630,15 @@ const restart = () => {
   showHint.value = false
   showSuccess.value = false
   showError.value = false
+  showCheckout.value = false
+  selectedItem.value = null
+  gamePhase.value = 'entrance'
   generateQuestions()
 }
 
 const goBack = () => router.push('/')
 
-onMounted(() => {
-})
+onMounted(() => {})
 </script>
 
 <style scoped>
@@ -570,59 +656,9 @@ onMounted(() => {
   bottom: 0;
   z-index: 0;
   pointer-events: none;
-  background: linear-gradient(180deg, #87CEEB 0%, #E0F7FA 50%, #FFCCBC 100%);
-}
-.shelf {
-  position: absolute;
-  width: 100%;
-  height: 80px;
-  background: linear-gradient(180deg, #8B4513 0%, #A0522D 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 30px;
-  padding: 0 20px;
-}
-.shelf::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  height: 10px;
-  background: #654321;
-}
-.shelf-top {
-  top: 20px;
-}
-.shelf-item {
-  font-size: 40px;
-  filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3));
-}
-.cash-register {
-  position: absolute;
-  bottom: 100px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 200px;
-  height: 120px;
-  background: linear-gradient(180deg, #696969 0%, #808080 100%);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-}
-.register-screen {
-  width: 80%;
-  height: 40%;
-  background: #90EE90;
-  border-radius: 5px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  color: #333;
-  font-weight: bold;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='800' viewBox='0 0 1200 800'%3E%3Cdefs%3E%3ClinearGradient id='wall' x1='0%25' y1='0%25' x2='0%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23f5f5f5'/%3E%3Cstop offset='100%25' style='stop-color:%23e0e0e0'/%3E%3C/linearGradient%3E%3ClinearGradient id='floor' x1='0%25' y1='0%25' x2='0%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23d4af37'/%3E%3Cstop offset='100%25' style='stop-color:%23b8860b'/%3E%3C/linearGradient%3E%3ClinearGradient id='counter' x1='0%25' y1='0%25' x2='0%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%238b4513'/%3E%3Cstop offset='100%25' style='stop-color:%23654321'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='0' y='0' width='1200' height='550' fill='url(%23wall)'/%3E%3Crect x='0' y='550' width='1200' height='250' fill='url(%23floor)'/%3E%3Crect x='0' y='530' width='1200' height='20' fill='%23a0522d'/%3E%3Crect x='100' y='400' width='1000' height='130' rx='10' fill='url(%23counter)' stroke='%234a2c0a' stroke-width='3'/%3E%3Crect x='150' y='340' width='380' height='150' rx='10' fill='%232a2a2a' stroke='%23333' stroke-width='3'/%3E%3Crect x='160' y='350' width='360' height='30' fill='%23003300'/%3E%3Ctext x='340' y='372' font-family='Courier New' font-size='16' fill='%2300ff00' text-anchor='middle'%3E***%20SUPERMARKET%20***%3C/text%3E%3Crect x='160' y='390' width='360' height='25' fill='%23003300'/%3E%3Ctext x='170' y='408' font-family='Courier New' font-size='12' fill='%23ffff00'%3EITEM%3C/text%3E%3Ctext x='450' y='408' font-family='Courier New' font-size='12' fill='%23ffff00' text-anchor='end'%3E¥3.00%3C/text%3E%3Crect x='160' y='420' width='360' height='25' fill='%23003300'/%3E%3Ctext x='170' y='438' font-family='Courier New' font-size='12' fill='%2300ff00'%3EDUE%3C/text%3E%3Ctext x='450' y='438' font-family='Courier New' font-size='12' fill='%2300ff00' text-anchor='end'%3E¥10.00%3C/text%3E%3Crect x='160' y='450' width='360' height='2' fill='%2300ff00'/%3E%3Crect x='160' y='460' width='360' height='25' fill='%23003300'/%3E%3Ctext x='170' y='478' font-family='Courier New' font-size='14' fill='%23ff6600' font-weight='bold'%3ECHANGE%3C/text%3E%3Ctext x='450' y='478' font-family='Courier New' font-size='14' fill='%23ff6600' font-weight='bold' text-anchor='end'%3E¥7.00%3C/text%3E%3Crect x='560' y='340' width='440' height='150' rx='10' fill='%232a2a2a' stroke='%23333' stroke-width='3'/%3E%3Crect x='570' y='350' width='420' height='30' fill='%23000000'/%3E%3Ctext x='780' y='372' font-family='Arial' font-size='14' fill='%2300ff00' text-anchor='middle'%3E2024-01-15%2014:30%3C/text%3E%3Crect x='570' y='390' width='420' height='90' fill='%23000000'/%3E%3Ctext x='780' y='420' font-family='Courier New' font-size='12' fill='%23999' text-anchor='middle'%3ESCAN%20BARCODE%20HERE%3C/text%3E%3Crect x='600' y='430' width='120' height='35' rx='5' fill='%23333' stroke='%23555'/%3E%3Ctext x='660' y='455' font-family='Arial' font-size='10' fill='%23999' text-anchor='middle'%3EVOID%3C/text%3E%3Crect x='740' y='430' width='120' height='35' rx='5' fill='%23333' stroke='%23555'/%3E%3Ctext x='800' y='455' font-family='Arial' font-size='10' fill='%23999' text-anchor='middle'%3ECLEAR%3C/text%3E%3Crect x='880' y='430' width='90' height='35' rx='5' fill='%23333' stroke='%23555'/%3E%3Ctext x='925' y='455' font-family='Arial' font-size='10' fill='%23999' text-anchor='middle'%3EENTER%3C/text%3E%3Crect x='600' y='480' width='370' height='100' fill='%23000000'/%3E%3Ctext x='780' y='510' font-family='Arial' font-size='11' fill='%23999' text-anchor='middle'%3E***%20THANK%20YOU%20***%3C/text%3E%3Ctext x='780' y='535' font-family='Arial' font-size='14' fill='%23ffff00' text-anchor='middle'%3E1-8888-8888%3C/text%3E%3Crect x='50' y='200' width='150' height='200' fill='%23fafafa' stroke='%23ddd' stroke-width='2'/%3E%3Crect x='60' y='210' width='130' height='80' fill='%23fff' stroke='%23eee'/%3E%3Ctext x='125' y='260' font-size='40' text-anchor='middle'%3E🍎%3C/text%3E%3Ctext x='125' y='380' font-size='14' text-anchor='middle' fill='%23333'%3E¥3%3C/text%3E%3Crect x='230' y='200' width='150' height='200' fill='%23fafafa' stroke='%23ddd' stroke-width='2'/%3E%3Crect x='240' y='210' width='130' height='80' fill='%23fff' stroke='%23eee'/%3E%3Ctext x='305' y='260' font-size='40' text-anchor='middle'%3E🍌%3C/text%3E%3Ctext x='305' y='380' font-size='14' text-anchor='middle' fill='%23333'%3E¥4%3C/text%3E%3Crect x='410' y='200' width='150' height='200' fill='%23fafafa' stroke='%23ddd' stroke-width='2'/%3E%3Crect x='420' y='210' width='130' height='80' fill='%23fff' stroke='%23eee'/%3E%3Ctext x='485' y='260' font-size='40' text-anchor='middle'%3E🍞%3C/text%3E%3Ctext x='485' y='380' font-size='14' text-anchor='middle' fill='%23333'%3E¥5%3C/text%3E%3Crect x='590' y='200' width='150' height='200' fill='%23fafafa' stroke='%23ddd' stroke-width='2'/%3E%3Crect x='600' y='210' width='130' height='80' fill='%23fff' stroke='%23eee'/%3E%3Ctext x='665' y='260' font-size='40' text-anchor='middle'%3E🥚%3C/text%3E%3Ctext x='665' y='380' font-size='14' text-anchor='middle' fill='%23333'%3E¥2%3C/text%3E%3Crect x='770' y='200' width='150' height='200' fill='%23fafafa' stroke='%23ddd' stroke-width='2'/%3E%3Crect x='780' y='210' width='130' height='80' fill='%23fff' stroke='%23eee'/%3E%3Ctext x='845' y='260' font-size='40' text-anchor='middle'%3E🍪%3C/text%3E%3Ctext x='845' y='380' font-size='14' text-anchor='middle' fill='%23333'%3E¥7%3C/text%3E%3Crect x='950' y='200' width='150' height='200' fill='%23fafafa' stroke='%23ddd' stroke-width='2'/%3E%3Crect x='960' y='210' width='130' height='80' fill='%23fff' stroke='%23eee'/%3E%3Ctext x='1025' y='260' font-size='40' text-anchor='middle'%3E🥛%3C/text%3E%3Ctext x='1025' y='380' font-size='14' text-anchor='middle' fill='%23333'%3E¥6%3C/text%3E%3C/svg%3E")
+    no-repeat center center;
+  background-size: cover;
 }
 .header {
   position: relative;
@@ -742,22 +778,45 @@ onMounted(() => {
   animation: shake 0.5s ease-in-out;
 }
 @keyframes idle {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
 }
 @keyframes thinking {
-  0%, 100% { transform: translateY(0) rotate(-5deg); }
-  50% { transform: translateY(-8px) rotate(5deg); }
+  0%,
+  100% {
+    transform: translateY(0) rotate(-5deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(5deg);
+  }
 }
 @keyframes celebrate {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.2) rotate(10deg); }
-  100% { transform: scale(1) rotate(0); }
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2) rotate(10deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
 }
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-10px); }
-  75% { transform: translateX(10px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-10px);
+  }
+  75% {
+    transform: translateX(10px);
+  }
 }
 .thought-bubble {
   position: absolute;
@@ -768,11 +827,11 @@ onMounted(() => {
   border-radius: 12px;
   font-size: 12px;
   color: #333;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   white-space: nowrap;
 }
 .thought-bubble::before {
-  content: ''; 
+  content: '';
   position: absolute;
   bottom: -8px;
   left: 20px;
@@ -791,214 +850,324 @@ onMounted(() => {
   border-radius: 16px;
   font-size: 14px;
   color: #333;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
   animation: popIn 0.3s ease-out;
   max-width: 200px;
 }
 @keyframes popIn {
-  from { transform: scale(0); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
-.shopping-scene {
-  position: relative;
-  background: white;
-  border-radius: 24px;
-  padding: 20px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+.shelf-scene {
+  background: linear-gradient(180deg, #8b4513 0%, #654321 100%);
+  border-radius: 16px;
+  padding: 16px;
+  margin: 10px auto;
+  max-width: 600px;
 }
-.shop-header {
+.shelf-header {
   text-align: center;
   margin-bottom: 16px;
 }
-.shop-sign {
-  display: inline-block;
-  background: linear-gradient(135deg, #ff6b6b, #ff8e53);
-  color: white;
-  padding: 8px 24px;
+.shelf-title {
+  background: #ffd700;
+  color: #333;
+  padding: 10px 24px;
   border-radius: 20px;
+  font-size: 18px;
+  font-weight: 700;
+  display: inline-block;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+.shelf-items {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.shelf-item {
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: 3px solid transparent;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+.shelf-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+.shelf-item.selected {
+  border-color: #ff6b6b;
+  background: #fff3f3;
+}
+.shelf-emoji {
+  font-size: 40px;
+  margin-bottom: 4px;
+}
+.shelf-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+.shelf-price {
   font-size: 16px;
   font-weight: 700;
+  color: #ff6b6b;
+}
+.checkout-btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #4caf50, #8bc34a);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.checkout-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.checkout-btn:not(:disabled):active {
+  transform: scale(0.98);
+}
+.shopping-scene {
+  position: relative;
+  background: #001100;
+  border-radius: 12px;
+  padding: 16px;
+  font-family: 'Courier New', monospace;
+  color: #00ff00;
+  border: 4px solid #333;
+  box-shadow: inset 0 0 20px rgba(0, 255, 0, 0.1);
+}
+.shop-header {
+  text-align: center;
+  margin-bottom: 12px;
+}
+.shop-sign {
+  display: inline-block;
+  background: #003300;
+  color: #00ff00;
+  padding: 6px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  border: 2px solid #00ff00;
+  text-shadow: 0 0 10px #00ff00;
 }
 .checkout-area {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 12px;
+  background: #001a00;
+  border-radius: 8px;
+  border: 1px solid #004400;
 }
 .item-display {
   flex: 1;
 }
 .item-card {
-  background: linear-gradient(135deg, #fff9e6, #fff3cc);
-  padding: 16px;
-  border-radius: 16px;
+  background: #002200;
+  padding: 10px;
+  border-radius: 8px;
   text-align: center;
-  border: 3px solid #ffd700;
+  border: 2px solid #00ff00;
 }
 .item-emoji {
-  font-size: 48px;
+  font-size: 32px;
   margin-bottom: 4px;
 }
 .item-name {
-  font-size: 16px;
+  font-size: 12px;
   font-weight: 700;
-  color: #333;
+  color: #00ff00;
   margin-bottom: 4px;
 }
 .item-price {
-  font-size: 16px;
-  color: #ff6b6b;
+  font-size: 14px;
+  color: #ffff00;
   font-weight: 700;
+  text-shadow: 0 0 5px #ffff00;
 }
 .vs-symbol {
-  font-size: 32px;
+  font-size: 24px;
   font-weight: bold;
-  color: #666;
+  color: #ff6600;
+  text-shadow: 0 0 10px #ff6600;
 }
 .change-display {
   flex: 1;
-  background: #e3f2fd;
-  padding: 12px;
-  border-radius: 12px;
+  background: #001a00;
+  padding: 8px;
+  border-radius: 8px;
   text-align: center;
+  border: 1px solid #006600;
 }
 .change-label {
-  font-size: 12px;
-  color: #1976d2;
+  font-size: 10px;
+  color: #00ff00;
   margin-bottom: 4px;
 }
 .change-equation {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: bold;
-  color: #333;
+  color: #00ff00;
 }
 .money-wallet {
-  background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
-  padding: 16px;
-  border-radius: 16px;
-  margin-bottom: 16px;
+  background: #001a00;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  border: 1px solid #004400;
 }
 .wallet-label {
-  font-size: 14px;
-  color: #2e7d32;
+  font-size: 12px;
+  color: #00ff00;
   font-weight: 600;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   text-align: center;
+  text-shadow: 0 0 5px #00ff00;
 }
 .money-display {
   display: flex;
   justify-content: center;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 .money-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
   justify-content: center;
 }
 .money-piece {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 4px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  padding: 2px;
+  background: #002200;
+  border-radius: 4px;
+  border: 1px solid #00ff00;
 }
 .money-piece.bill {
-  border: 2px solid #4caf50;
+  border-color: #00ff00;
 }
 .money-piece.coin {
-  border: 2px solid #FFD700;
+  border-color: #ffd700;
 }
 .money-img {
   display: block;
 }
 .total-money {
   text-align: center;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
-  color: #2e7d32;
-  padding-top: 8px;
-  border-top: 2px dashed #a5d6a7;
+  color: #ffff00;
+  padding-top: 6px;
+  border-top: 1px dashed #004400;
+  text-shadow: 0 0 5px #ffff00;
 }
 .calculation-area {
-  background: #f5f5f5;
-  padding: 16px;
-  border-radius: 12px;
-  margin-bottom: 16px;
+  background: #001a00;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
   text-align: center;
+  border: 1px solid #004400;
 }
 .calc-title {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
-  color: #ff6b6b;
-  margin-bottom: 8px;
+  color: #ff6600;
+  margin-bottom: 6px;
+  text-shadow: 0 0 5px #ff6600;
 }
 .calc-equation {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
-  color: #333;
-  margin-bottom: 8px;
+  color: #00ff00;
+  margin-bottom: 6px;
 }
 .calc-num {
   display: inline-block;
-  padding: 4px 10px;
-  background: white;
-  border-radius: 8px;
+  padding: 4px 8px;
+  background: #003300;
+  border-radius: 4px;
   margin: 0 4px;
-  min-width: 40px;
+  min-width: 30px;
+  border: 1px solid #00ff00;
 }
 .calc-num.primary {
-  background: #e3f2fd;
-  color: #1976d2;
+  background: #004400;
+  color: #00ffff;
+  border-color: #00ffff;
 }
 .calc-num.highlight {
-  background: #ff6b6b;
-  color: white;
+  background: #660000;
+  color: #ff0000;
+  border-color: #ff0000;
 }
 .calc-op {
-  color: #ff6b6b;
+  color: #ff6600;
   margin: 0 4px;
   font-weight: 700;
 }
 .calc-hint {
-  font-size: 12px;
-  color: #666;
-  line-height: 1.6;
-  background: #fff;
-  padding: 8px;
-  border-radius: 8px;
+  font-size: 10px;
+  color: #00ff00;
+  line-height: 1.4;
+  background: #002200;
+  padding: 6px;
+  border-radius: 4px;
 }
 .answer-section {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 .answer-label {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  color: #333;
+  color: #00ff00;
   text-align: center;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
+  text-shadow: 0 0 5px #00ff00;
 }
 .answer-buttons {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  gap: 8px;
 }
 .answer-btn {
-  padding: 16px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  border: none;
-  border-radius: 12px;
-  color: white;
-  font-size: 24px;
+  padding: 12px;
+  background: linear-gradient(135deg, #003300, #004400);
+  border: 2px solid #00ff00;
+  border-radius: 8px;
+  color: #00ff00;
+  font-size: 20px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.3s;
+  font-family: 'Courier New', monospace;
+  text-shadow: 0 0 5px #00ff00;
 }
 .answer-btn:active {
   transform: scale(0.95);
+  background: #005500;
 }
 .answer-btn.selected {
   background: linear-gradient(135deg, #ff6b6b, #ff8e53);
@@ -1010,25 +1179,27 @@ onMounted(() => {
 }
 .hint-btn {
   flex: 1;
-  padding: 14px;
-  background: #fff3e0;
-  border: 2px solid #ff9800;
-  border-radius: 12px;
-  color: #ff9800;
-  font-size: 16px;
+  padding: 12px;
+  background: #002200;
+  border: 2px solid #ff6600;
+  border-radius: 8px;
+  color: #ff6600;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  font-family: 'Courier New', monospace;
 }
 .submit-btn {
   flex: 2;
-  padding: 14px;
-  background: linear-gradient(135deg, #4caf50, #8bc34a);
-  border: none;
-  border-radius: 12px;
-  color: white;
-  font-size: 16px;
+  padding: 12px;
+  background: linear-gradient(135deg, #003300, #004400);
+  border: 2px solid #00ff00;
+  border-radius: 8px;
+  color: #00ff00;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  font-family: 'Courier New', monospace;
 }
 .submit-btn:disabled {
   opacity: 0.5;
@@ -1072,8 +1243,13 @@ onMounted(() => {
   animation: bounce 1s ease-in-out infinite;
 }
 @keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
 }
 .loading-text {
   font-size: 20px;
@@ -1093,8 +1269,15 @@ onMounted(() => {
   animation: pulse 2s ease-in-out infinite;
 }
 @keyframes pulse {
-  0%, 100% { transform: scale(1); box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4); }
-  50% { transform: scale(1.05); box-shadow: 0 8px 25px rgba(255, 107, 107, 0.6); }
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(255, 107, 107, 0.6);
+  }
 }
 .result-card {
   position: relative;
@@ -1103,7 +1286,7 @@ onMounted(() => {
   border-radius: 24px;
   padding: 32px 24px;
   text-align: center;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
 }
 .result-icon {
   font-size: 80px;
@@ -1132,8 +1315,12 @@ onMounted(() => {
   font-size: 32px;
   font-weight: 700;
 }
-.stat-value.correct { color: #4caf50; }
-.stat-value.wrong { color: #f44336; }
+.stat-value.correct {
+  color: #4caf50;
+}
+.stat-value.wrong {
+  color: #f44336;
+}
 .stat-label {
   font-size: 14px;
   color: #666;
