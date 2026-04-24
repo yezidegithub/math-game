@@ -33,6 +33,11 @@ const router = createRouter({
       name: 'MoneyGame',
       component: () => import('@/views/MoneyGame/MoneyGameView.vue'),
     },
+    {
+      path: '/chinese',
+      name: 'ChineseCharacter',
+      component: () => import('@/views/ChineseCharacter/ChineseCharacterView.vue'),
+    },
   ],
 })
 

@@ -19,6 +19,11 @@
           <div class="module-name">{{ item.name }}</div>
           <div class="module-desc">{{ item.desc }}</div>
         </div>
+        <div class="module-card coming-soon">
+          <div class="module-icon">🔜</div>
+          <div class="module-name">更多模块</div>
+          <div class="module-desc">敬请期待</div>
+        </div>
       </div>
 
       <div class="stats-card">
@@ -79,11 +84,18 @@ const modules = [
     color: '#FFD700',
   },
   {
+    path: '/chinese',
+    name: '趣味汉字',
+    desc: '学习汉字笔顺',
+    icon: '🈸',
+    color: '#96CEB4',
+  },
+  {
     path: '/game',
     name: '趣味游戏',
     desc: '数学小游戏',
     icon: '🎮',
-    color: '#96CEB4',
+    color: '#FFA07A',
   },
 ]
 
@@ -202,5 +214,22 @@ const goToModule = (path: string) => {
   font-size: 14px;
   color: #666;
   margin-top: 4px;
+}
+
+.coming-soon {
+  background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%) !important;
+  opacity: 0.7;
+}
+
+.coming-soon .module-icon {
+  font-size: 40px;
+}
+
+.coming-soon .module-name {
+  color: #666;
+}
+
+.coming-soon .module-desc {
+  color: #999;
 }
 </style>

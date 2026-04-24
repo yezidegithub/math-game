@@ -122,9 +122,9 @@ const progress = computed(
 const accuracy = computed(() =>
   Math.round((correctCount.value / totalQuestions.value) * 100)
 )
-const displayNumbers = computed(() => {
-  const seq = [...currentQuestion.value.sequence]
-  seq.splice(currentQuestion.value.missingIndex, 0, '?')
+const displayNumbers = computed((): (number | string)[] => {
+  const seq = [...currentQuestion.value.sequence] as (number | string)[]
+  seq.splice(missingIndex.value, 0, '?')
   return seq
 })
 const missingIndex = computed(() => currentQuestion.value.missingIndex)

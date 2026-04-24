@@ -361,7 +361,7 @@ const selectedItem = ref<{ name: string; emoji: string; price: number } | null>(
 )
 const gamePhase = ref<'entrance' | 'shopping' | 'checkout'>('entrance')
 
-const handleArrive = (location: string) => {}
+const handleArrive = (_location: string) => {}
 
 const handleEnter = () => {
   if (gamePhase.value === 'entrance') {
@@ -615,10 +615,6 @@ const setMode = (mode: 'addition' | 'subtraction') => {
 const setLevel = (level: number) => {
   currentLevel.value = level
   restart()
-}
-
-const startGame = () => {
-  generateQuestions()
 }
 
 const restart = () => {
